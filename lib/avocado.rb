@@ -13,6 +13,7 @@ class Avocado
     ["stop"] => :stop,
     ["status", "st"] => :status,
     ["history", "h"] => :history,
+    ["watch", "w"] => :watch,
   }
 
   def initialize(command = :status, options = {})
@@ -63,6 +64,20 @@ class Avocado
     else
       "no avocado running"
     end
+  end
+
+  def watch
+    if !current_file.exist?
+      abort "no avocado running"
+    end
+    if current_file.exist? && seconds_remaining <= 0
+      abort "no avocado running"
+    end
+    while(current_file.exist? && seconds_remaining > 0)
+      puts "current avocado running - #{time_left} left"
+      sleep 1
+    end
+    exit(true)
   end
 
   def history
