@@ -29,10 +29,6 @@ class Avocado
 
   attr_reader :command, :current_file, :past_file
 
-  def start
-    status
-  end
-
   def current_file
     @current_file ||= Pathname.new("~/.avocado").expand_path
   end
@@ -43,6 +39,7 @@ class Avocado
 
   def start
     FileUtils.touch(current_file)
+    "success - started an avocado"
   end
 
   def stop
