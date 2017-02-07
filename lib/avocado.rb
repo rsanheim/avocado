@@ -8,6 +8,37 @@ class Avocado
     new(command, args).run
   end
 
+  class Line
+    attr_reader :description
+    
+    def initialize(start_time:, end_time: nil, description: nil)
+      @start_time = start_time
+      @end_time = end_time
+      @description = description
+    end
+
+    def done?
+      !!(@start_time && @end_time)
+    end
+  end
+
+  def self.parse(line)
+    parts = line.split(";")
+    start_time = parts[0]
+    if parts.size == 2
+      end_or_desc = parts[1]
+      begin
+        end_time = Time.parse(end_or_desc)
+      rescue ArgumentError
+        description = parts[1]
+      end
+    else
+      end_time = parts[1]
+      description = parts[2]
+    end
+    Line.new(start_time: start_time, end_time: end_time, description: description)
+  end
+
   MAPPING = {
     ["start"] => :start,
     ["stop"] => :stop,
