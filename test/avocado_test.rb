@@ -21,12 +21,21 @@ describe Avocado do
       result = Avocado.run([])
       assert result.success
       assert_equal :status, result.command
+      assert_equal "No avocado currently running", result.output
     end
 
-    it "can run start" do
-      result = Avocado.run(["start"])
-      assert result.success
-      assert_equal :start, result.command
+    it "getting status after starting an avocado" do
+      time = Time.parse("January 22 2017, 3:30 AM CST")
+      two_minutes_later = Time.parse("January 22 2017, 3:32 AM CST")
+      Timecop.freeze(time) do
+        result = Avocado.run(["start", "doing things"])
+        assert result.success
+        Timecop.freeze(two_minutes_later) do
+          result = Avocado.run(["status"])
+          assert result.success
+          assert_equal "Avocado running - 23 minutes remaining", result.output
+        end
+      end
     end
 
     it "start writes out the beginning timestamp" do

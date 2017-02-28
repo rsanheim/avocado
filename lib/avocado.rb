@@ -43,8 +43,8 @@ class Avocado
     end
 
     def run
-      success = self.public_send(command)
-      Result.new(success: success, command: command)
+      success, output = self.public_send(command)
+      Result.new(success: success, command: command, output: output)
     end
 
     def start
@@ -67,24 +67,27 @@ class Avocado
     end
 
     def status
-      if current_file.exist?
-        if seconds_remaining <= 0
-          stop
-          "stopping a avocado - current avocado running - #{time_left} left"
-        else
-          "current avocado running - #{time_left} left"
-        end
+      lines = current_file.readlines
+      line = Avocado.parse(lines.pop) if lines.last
+      output = case
+      when line.nil?
+        "No avocado currently running"
+      when line.done?
+        raise "done"
       else
-        "no avocado running"
+        "Avocado running - #{line.minutes_remaining} minutes remaining"
       end
+
+      [true, output]
     end
 
 
     class Result
-      attr_reader :success, :command
-      def initialize(success:, command:)
+      attr_reader :success, :command, :output
+      def initialize(success:, command:, output: nil)
         @success = success
         @command = command
+        @output = output
       end
     end
 
@@ -106,6 +109,27 @@ class Avocado
 
     def to_s
       [start, stop, description].compact.join(";")
+    end
+
+    def seconds_elapsed
+      Time.now - Time.parse(@start)
+    end
+
+    def seconds_remaining
+      length - seconds_elapsed
+    end
+
+    def minutes_remaining
+      (seconds_remaining / 60).truncate
+    end
+
+    def time_left
+      seconds_part = (seconds_remaining - (minutes_remaining * 60)).round
+      "#{minutes_remaining}:#{seconds_part}"
+    end
+
+    def length
+      25 * 60
     end
   end
 
