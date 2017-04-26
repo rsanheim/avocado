@@ -67,7 +67,7 @@ describe Avocado do
       assert_equal "2017-01-22 03:30:00 -0600;#{stop}", Avocado.current_file.read
     end
 
-    it "second avocado starts a new line rjs" do
+    it "second avocado starts a new line" do
       start = Time.parse("January 22 2017, 3:30 AM CST")
       stop = nil
       second_start = nil
