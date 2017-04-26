@@ -6,6 +6,7 @@ gem "rake"
 group :development do
   gem "timecop"
   gem "minitest"
+  gem "minitest-focus"
 end
 
 gemspec
