@@ -3,66 +3,167 @@ require "pathname"
 require "fileutils"
 
 class Avocado
+  def self.length
+    25 * 60
+  end
+
   def self.run(args)
-    command = args.shift
-    new(command, args).run
+    command = args.shift || "status"
+    Runner.new(command, args).run
   end
 
-  MAPPING = {
-    ["start"] => :start,
-    ["stop"] => :stop,
-    ["status", "st"] => :status,
-    ["history", "h"] => :history,
-  }
-
-  def initialize(command = :status, options = {})
-    mapping = MAPPING.detect { |k, v| k.include?(command) }
-    @command = mapping[1]
-    raise "Unknown command #{command}" unless @command
-    @options = options
+  def self.current_file
+    @current_file ||= Pathname.new("~/.avocado").expand_path
   end
 
-  def run
-    puts self.public_send(command)
+  def self.current_file=(path)
+    @current_file = path
+  end
+
+  class Runner
+    attr_reader :command
+    MAPPING = {
+      ["start"] => :start,
+      ["stop"] => :stop,
+      ["status", "st"] => :status,
+      ["history", "h"] => :history,
+      ["watch", "w"] => :watch,
+    }
+
+    def initialize(command = "status", options = {})
+      mapping = MAPPING.detect { |k, v| k.include?(command) }
+      raise "Unknown command #{command}" unless mapping
+      @command = mapping[1]
+      raise "Unknown command #{command}" unless @command
+      @options = options
+    end
+
+    def current_file
+      Avocado.current_file
+    end
+
+    def run
+      success, output = self.public_send(command)
+      Result.new(success: success, command: command, output: output)
+    end
+
+    def start
+      description = @options.first
+      FileUtils.touch(current_file)
+      current_lines = current_file.readlines
+      lines = current_lines << Line.new(start: Time.now, description: description).to_s
+      current_file.open("w+") { |f| f.write lines.join("\n") }
+      true
+    end
+
+    def stop
+      lines = current_file.readlines
+      line = Avocado.parse(lines.pop) if lines.last
+      line.stop = Time.now
+      lines << line.to_s
+
+      current_file.open("w+") { |f| f.write lines.join("\n") }
+      true
+    end
+
+    def status
+      lines = current_file.readlines
+      line = Avocado.parse(lines.pop) if lines.last
+      output = case
+      when line.nil?
+        "No avocado currently running"
+      when line.done?
+        raise "done"
+      else
+        "Avocado running - #{line.minutes_remaining} minutes remaining"
+      end
+
+      [true, output]
+    end
+
+
+    class Result
+      attr_reader :success, :command, :output
+      def initialize(success:, command:, output: nil)
+        @success = success
+        @command = command
+        @output = output
+      end
+    end
+
+  end
+
+  class Line
+    attr_reader :description
+    attr_accessor :start, :stop
+
+    def initialize(start:, stop: nil, description: nil)
+      @start = start
+      @stop = stop
+      @description = description
+    end
+
+    def done?
+      !!(@start && @stop)
+    end
+
+    def to_s
+      [start, stop, description].compact.join(";")
+    end
+
+    def seconds_elapsed
+      Time.now - Time.parse(@start)
+    end
+
+    def seconds_remaining
+      length - seconds_elapsed
+    end
+
+    def minutes_remaining
+      (seconds_remaining / 60).truncate
+    end
+
+    def time_left
+      seconds_part = (seconds_remaining - (minutes_remaining * 60)).round
+      "#{minutes_remaining}:#{seconds_part}"
+    end
+
+    def length
+      25 * 60
+    end
+  end
+
+  def self.parse(line)
+    parts = line.split(";")
+    start = parts[0]
+    if parts.size == 2
+      stop_or_desc = parts[1]
+      begin
+        stop = Time.parse(stop_or_desc)
+      rescue ArgumentError
+        description = parts[1]
+      end
+    else
+      stop = parts[1]
+      description = parts[2]
+    end
+    Line.new(start: start, stop: stop, description: description)
   end
 
   attr_reader :command, :current_file, :past_file
 
-  def start
-    status
-  end
-
-  def current_file
-    @current_file ||= Pathname.new("~/.avocado").expand_path
-  end
-
-  def history_file
-    @history_file ||= Pathname.new("~/.avocado_history").expand_path
-  end
-
-  def start
-    FileUtils.touch(current_file)
-  end
-
-  def stop
-    history_file.open("a") do |file|
-      file.puts "#{current_file.mtime} #{current_file.ctime + length}"
+  def watch
+    if !current_file.exist?
+      abort "no avocado running"
     end
-    current_file.delete
-    "stopped avocado"
-  end
-
-  def status
-    if current_file.exist?
-      if seconds_remaining <= 0
-        stop
-        "stopping a avocado - current avocado running - #{time_left} left"
-      else
-        "current avocado running - #{time_left} left"
-      end
-    else
-      "no avocado running"
+    if current_file.exist? && seconds_remaining <= 0
+      abort "no avocado running"
     end
+    while(current_file.exist? && seconds_remaining > 0)
+      puts "current avocado running - #{time_left} left"
+      sleep 1
+    end
+    exit(true)
   end
 
   def history
