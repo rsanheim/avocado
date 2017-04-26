@@ -26,7 +26,6 @@ describe Avocado do
     end
 
     describe "status" do
-      focus
       it "getting status after starting an avocado" do
         time = Time.parse("January 22 2017, 3:30 AM CST")
         two_minutes_later = Time.parse("January 22 2017, 3:32 AM CST")

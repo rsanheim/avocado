@@ -75,8 +75,8 @@ class Avocado
         line = Avocado.parse(lines.pop)
         if line.running_over_time?
           line.autocomplete
-          line
         end
+        line
       end
 
       output = case
@@ -113,7 +113,7 @@ class Avocado
     end
 
     def done?
-      !!(@start && @stop)
+      @start && @stop
     end
 
     def to_s
