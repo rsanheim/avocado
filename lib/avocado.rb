@@ -10,8 +10,7 @@ class Avocado
 
   def self.run(args)
     command = args.shift || "status"
-    result = Runner.new(command, args).run
-    puts result.output
+    Runner.new(command, args).run
   end
 
   def self.current_file
