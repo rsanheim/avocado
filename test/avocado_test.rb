@@ -35,7 +35,7 @@ describe Avocado do
           Timecop.freeze(two_minutes_later) do
             result = Avocado.run(["status"])
             assert result.success
-            assert_equal "Avocado running - 23 minutes remaining", result.output
+            assert_equal "Avocado running: 'doing things' with 23 minutes remaining", result.output
           end
         end
       end
@@ -100,6 +100,10 @@ describe Avocado do
         end
       end
       assert_equal "2017-01-22 03:30:00 -0600;#{stop}\n#{second_start}", Avocado.current_file.read
+    end
+
+    it "stop will only stop an avocado once" do
+      raise 'implement me'
     end
   end
 

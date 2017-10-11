@@ -66,7 +66,7 @@ class Avocado
       lines << line.to_s
 
       current_file.open("w+") { |f| f.write lines.join("\n") }
-      true
+      [true, "Avocado #{line.description} stopped"]
     end
 
     def status
@@ -87,7 +87,7 @@ class Avocado
       when line.done?
         "No avocado currently running"
       else
-        "Avocado running - #{line.minutes_remaining} minutes remaining"
+        "Avocado running: '#{line.description}' with #{line.minutes_remaining} minutes remaining"
       end
 
       [true, output]
