@@ -44,12 +44,12 @@ describe Avocado do
         time = Time.parse("January 22 2017, 3:30 AM CST")
         two_months_later = Time.parse("March 22 2017, 3:30 AM CST")
         Timecop.freeze(time) do
-          result = Avocado.run(["start", "doing things"])
-          assert result.success
+          start_result = Avocado.run(["start", "doing things"])
+          assert start_result.success
           Timecop.freeze(two_months_later) do
-            rseult = Avocado.run(["status"])
-            assert result.success
-            assert_equal "No avocado currently running", result.output
+            status_result = Avocado.run(["status"])
+            assert status_result.success
+            assert_equal "No avocado currently running", status_result.output
           end
         end
       end

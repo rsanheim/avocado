@@ -74,7 +74,9 @@ class Avocado
       line = if lines.last
         line = Avocado.parse(lines.pop)
         if line.running_over_time?
-          line.autocomplete
+          stop
+          # maybe a line.reload ?
+          line = Avocado.parse(current_file.readlines.last)
         end
         line
       end
@@ -153,18 +155,24 @@ class Avocado
   def self.parse(line)
     parts = line.split(";")
     start = Time.parse(parts[0])
-    if parts.size == 2
-      stop_or_desc = parts[1]
+    case parts.size
+    when 1
+      Line.new(start: start)
+    when 2
+      stop_or_description = parts[1]
       begin
-        stop = Time.parse(stop_or_desc)
+        stop = Time.parse(stop_or_description)
       rescue ArgumentError
         description = parts[1]
       end
-    else
-      stop = parts[1]
+      Line.new(start: start, stop: stop, description: description)
+    when 3
+      stop = Time.parse(parts[1])
       description = parts[2]
+      Line.new(start: start, stop: stop, description: description)
+    else
+      raise ArgumentError, "Invalid line format #{line}"
     end
-    Line.new(start: start, stop: stop, description: description)
   end
 
   attr_reader :command, :current_file, :past_file
