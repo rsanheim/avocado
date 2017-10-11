@@ -10,7 +10,8 @@ class Avocado
 
   def self.run(args)
     command = args.shift || "status"
-    Runner.new(command, args).run
+    result = Runner.new(command, args).run
+    puts result.output
   end
 
   def self.current_file
@@ -55,7 +56,7 @@ class Avocado
       current_lines = current_file.readlines
       lines = current_lines << Line.new(start: Time.now, description: description).to_s
       current_file.open("w+") { |f| f.write lines.join("\n") }
-      true
+      [true, "Avocado #{description} started"]
     end
 
     def stop
