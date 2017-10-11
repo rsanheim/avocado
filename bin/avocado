@@ -5,4 +5,4 @@ $LOAD_PATH.unshift(lib)
 
 require "avocado"
 
-Avocado.run(ARGV)
+puts Avocado.run(ARGV).output

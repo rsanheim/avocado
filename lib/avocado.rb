@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "pathname"
 require "fileutils"
+require "time"
 
 class Avocado
   def self.length
@@ -50,15 +51,17 @@ class Avocado
     def start
       description = @options.first
       FileUtils.touch(current_file)
+
       current_lines = current_file.readlines
       lines = current_lines << Line.new(start: Time.now, description: description).to_s
       current_file.open("w+") { |f| f.write lines.join("\n") }
-      true
+      [true, "Avocado #{description} started"]
     end
 
     def stop
       lines = current_file.readlines
       line = Avocado.parse(lines.pop) if lines.last
+
       line.stop = Time.now
       lines << line.to_s
 
@@ -68,19 +71,27 @@ class Avocado
 
     def status
       lines = current_file.readlines
-      line = Avocado.parse(lines.pop) if lines.last
+      line = if lines.last
+        line = Avocado.parse(lines.pop)
+        if line.running_over_time?
+          stop
+          # maybe a line.reload ?
+          line = Avocado.parse(current_file.readlines.last)
+        end
+        line
+      end
+
       output = case
       when line.nil?
         "No avocado currently running"
       when line.done?
-        raise "done"
+        "No avocado currently running"
       else
         "Avocado running - #{line.minutes_remaining} minutes remaining"
       end
 
       [true, output]
     end
-
 
     class Result
       attr_reader :success, :command, :output
@@ -104,15 +115,23 @@ class Avocado
     end
 
     def done?
-      !!(@start && @stop)
+      @start && @stop
     end
 
     def to_s
       [start, stop, description].compact.join(";")
     end
 
+    def running_over_time?
+      !done? && (seconds_elapsed > length)
+    end
+
+    def autocomplete
+      self.stop = self.start + length
+    end
+
     def seconds_elapsed
-      Time.now - Time.parse(@start)
+      Time.now - (@start)
     end
 
     def seconds_remaining
@@ -135,19 +154,25 @@ class Avocado
 
   def self.parse(line)
     parts = line.split(";")
-    start = parts[0]
-    if parts.size == 2
-      stop_or_desc = parts[1]
+    start = Time.parse(parts[0])
+    case parts.size
+    when 1
+      Line.new(start: start)
+    when 2
+      stop_or_description = parts[1]
       begin
-        stop = Time.parse(stop_or_desc)
+        stop = Time.parse(stop_or_description)
       rescue ArgumentError
         description = parts[1]
       end
-    else
-      stop = parts[1]
+      Line.new(start: start, stop: stop, description: description)
+    when 3
+      stop = Time.parse(parts[1])
       description = parts[2]
+      Line.new(start: start, stop: stop, description: description)
+    else
+      raise ArgumentError, "Invalid line format #{line}"
     end
-    Line.new(start: start, stop: stop, description: description)
   end
 
   attr_reader :command, :current_file, :past_file
